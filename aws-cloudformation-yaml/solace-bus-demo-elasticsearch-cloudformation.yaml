@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Creates the Elastic Search cluster 
+  used by the Solace Bus Demo. This template does not (cannot) apply
+  cluster configurations (e.g. indices, dashboards etc.)
+Metadata:
+  'AWS::CloudFormation::Designer':
+    c55898ea-8649-463f-89dd-54a2a7de52f0:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 470
+        'y': 120
+      z: 0
+      embeds: []
+Parameters:
+  Owner:
+    Type: String
+    Description: Username, in lowercase, of the person who owns this instance (e.g. ushukla). Max 7 characters.
+    Default: none
+    AllowedPattern: ^[a-z]+$
+    MaxLength: 7
+    ConstraintDescription: Username cannot exceed 7 characters.
+  Purpose:
+    Type: String
+    Description: Purpose of this stack. Should include the event/engagement/session it is intended for, if any.
+    Default: ''
+    MinLength: 0
+    MaxLength: 100
+  EndDate:
+    Type: String
+    Description: Expiry date of this instance (mmddyyyy).
+    Default: 12312020
+    AllowedPattern: ^[0-9]{2}[0-9]{2}[0-9]{4}$
+    ConstraintDescription: Please enter a date in the format mmddyyyy.
+Resources:
+  SolaceBusDemoES:
+    Type: 'AWS::Elasticsearch::Domain'
+    Properties:
+      AccessPolicies:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            AWS: "*"
+          Action: es:*
+          Resource: !Join ['/', !Join [':',['arn:aws:es', !Ref AWS:Region, !Ref AWS:AccountId, 'domain/', !Ref AWS:StackName] ],['*']]
+      DomainName: !Ref AWS:StackName
+      ElasticsearchVersion: '7.1'
+      ElasticsearchClusterConfig:
+        InstanceType: t2.small.elasticsearch
+        InstanceCount: 1
+        DedicatedMasterEnabled: true
+        DedicatedMasterType: t2.small.elasticsearch
+        DedicatedMasterCount: 3
+      EBSOptions:
+        EBSEnabled: true
+        VolumeType: gp2
+        VolumeSize: 10
+      Tags:
+        - Key: Owner 
+          Value: !Ref OwnerId
+        - Key: Purpose
+          Value: !Ref Purpose
+        - Key: EndDate
+          Value: !Ref EndDate
+        - Key: Notice
+          Value: Created by Solace Bus Demo CloudFormation Template
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: c55898ea-8649-463f-89dd-54a2a7de52f0
