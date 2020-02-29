@@ -87,52 +87,11 @@ Resources:
     Properties:
       Runtime: python3.7
       Timeout: 30
-      Handler: lambda_function.lambda_handler
-      Description: Invoked to configure Elastic Searcn & Kibana once the Elastic Search Domain is setup.
+      Handler: main.handler
+      Description: Configures Elastic Search & Kibana once the Domain is setup.
       Code:
-        ZipFile: |
-          import urllib.request
-          import boto3
-          import os
-          import cfn-response
-
-          s3 = boto3.client('s3')
-
-          def lambda_handler(event, context):
-   
-            # Get the object & key (i.e. the location) of our config file
-            bucket = event['Properties']['BUS_DEMO_S3_BUCKET']
-            key = event['Properties']['KIBANA_CONFIG_S3_OBJECT_KEY']
-    
-            try:
-                
-                s3doc = s3.get_object(Bucket=bucket, Key=key)
-                reqdata=s3doc['Body'].read()
-   
-                #Setup the request to Kibana
-                kibana_endpoint = event['Properties']['KIBANA_ENDPOINT']
-                req = urllib.request.Request(kibana_endpoint,reqdata)
-                req.add_header('Content-Type','application/json')
-                req.add_header('kbn-xsrf','true')
-        
-                #send it in
-                response=urllib.request.urlopen(req)
-                
-                #Reply back to CloudFormation
-                responseData = {}
-                responseData ['Data'] = response.read()
-                cfnresponse.send(event,context,cfnresponse.SUCCESS,responseData)
-
-                #return the response
-                return responseData['Data']
-            except Exception as e:
-                print(e)
-
-                #Prepare the error response for CloudFormation
-                errorResponseData = {}
-                errorResponseData ['Data'] = e 
-                cfnresponse.send(event,contect,cfnresponse.FAILED,errorResponseData)
-                raise e
+        S3Bucket: bus-demo-resources
+        S3Key: lambdaConfigESDomain.zip
       Role: !GetAtt LambdaExecutionRole.Arn
     Metadata:
       'AWS::CloudFormation::Designer':
