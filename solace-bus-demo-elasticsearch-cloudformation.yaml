@@ -81,8 +81,9 @@ Resources:
           - Effect: Allow
             Action: es:*
             Resource: '*'
-      DependsOn: SolaceBusDemoESDomain
-  ESDomainConfigLambda:
+    DependsOn: 
+      - SolaceBusDemoESDomain
+  ConfigESDomain:
     Type: AWS::Lambda::Function
     Properties:
       Runtime: python3.7
@@ -91,22 +92,35 @@ Resources:
       Description: Configures Elastic Search & Kibana once the Domain is setup.
       Code:
         S3Bucket: bus-demo-resources
-        S3Key: lambdaConfigESDomain.zip
+        S3Key: busdemo-lambda-uploadESconfigFromS3.zip
       Role: !GetAtt LambdaExecutionRole.Arn
     Metadata:
       'AWS::CloudFormation::Designer':
         id: 372ea895-df4f-4ca2-b669-c515338caa1e
     DependsOn:
       - LambdaExecutionRole
-  #We use a CustomResource to execute the Lambda defined above.
-  ExecESDomainConfigLambda:
+  #use a CustomResource to execute ConfigESDomain.
+  ExecConfigESDomain:
     Type: AWS::CloudFormation::CustomResource
     Properties:
-      ServiceToken: !GetAtt ESDomainConfigLambda.Arn
+      ServiceToken: !GetAtt ExecConfigESDomain.Arn
       BUS_DEMO_S3_BUCKET: bus-demo-resources
       KIBANA_CONFIG_S3_OBJECT_KEY: bus-demo-kibana-object-export.json
       KIBANA_ENDPOINT: !Sub 
-        - ${kibana_base_uri}/_plugin/kibana/api/saved_objects/_bulk_create
+        - https://${kibana_base_uri}/_plugin/kibana/api/saved_objects/_bulk_create
         - {kibana_base_uri: !GetAtt SolaceBusDemoESDomain.DomainEndpoint}
     DependsOn:
-      - ESDomainConfigLambda
+      - ConfigESDomain
+  EnrichBusGpsDataSendToES:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: Nodejs12.x
+      Timeout: 30
+      Handler: index.handler
+      Description: Receives bus GPS updates from Solace via the API Gateway & puts them into our Elasticsearch Domain.
+      Code:
+        S3Bucket: bus-demo-resources
+        S3Key: busdemo-lambda-enrichBusGpsDataSendToES.zip
+      Role: !GetAtt LambdaExecutionRole.Arn
+    DependsOn:
+      - LambdaExecutionRole
